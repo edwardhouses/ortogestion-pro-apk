@@ -1,0 +1,61 @@
+
+name: Inspect OrtoGestion ZIP archives
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Install ZIP tools
+        run: sudo apt-get update && sudo apt-get install -y unzip
+
+      - name: Inspect Android and Windows archives
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p inventory
+
+          for file in \
+            "OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip" \
+            "OrtoGestion-Pro-Windows-Portable.zip"
+          do
+            if [ ! -f "$file" ]; then
+              echo "No se encontró: $file"
+              exit 1
+            fi
+
+            name=$(basename "$file" .zip)
+
+            echo "Inspeccionando: $file"
+            unzip -tqq "$file"
+
+            unzip -Z1 "$file" \
+              > "inventory/${name}-files.txt"
+
+            unzip -l "$file" \
+              > "inventory/${name}-details.txt"
+
+            echo "## $file" >> "$GITHUB_STEP_SUMMARY"
+            echo '```text' >> "$GITHUB_STEP_SUMMARY"
+            cat "inventory/${name}-files.txt" \
+              >> "$GITHUB_STEP_SUMMARY"
+            echo '```' >> "$GITHUB_STEP_SUMMARY"
+          done
+
+      - name: Upload inventory report
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrtoGestion-ZIP-Inventory
+          path: inventory/
+          if-no-files-found: error
+          retention-days: 7
