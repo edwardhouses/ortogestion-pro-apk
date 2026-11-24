@@ -1,1 +1,54 @@
 
+name: Build OrtoGestion Pro Windows Portable EXE
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - 'OrtoGestion-Pro-Windows-Portable.zip'
+      - '.github/workflows/windows-portable.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-windows:
+    runs-on: windows-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Download repository contents
+        uses: actions/checkout@v4
+
+      - name: Extract Windows project
+        shell: pwsh
+        run: |
+          Expand-Archive -LiteralPath 'OrtoGestion-Pro-Windows-Portable.zip' -DestinationPath 'source' -Force
+          if (!(Test-Path 'source/OrtoGestion-Pro-Windows-Portable/package.json')) { throw 'No se encontró package.json dentro del ZIP' }
+          if (!(Test-Path 'source/OrtoGestion-Pro-Windows-Portable/www/index.html')) { throw 'No se encontró la aplicación HTML' }
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        working-directory: source/OrtoGestion-Pro-Windows-Portable
+        run: npm install --no-audit --no-fund
+
+      - name: Run structural tests
+        working-directory: source/OrtoGestion-Pro-Windows-Portable
+        run: npm test
+
+      - name: Build portable Windows EXE
+        working-directory: source/OrtoGestion-Pro-Windows-Portable
+        run: npm run dist:win
+
+      - name: Upload portable EXE
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrtoGestion-Pro-2.1-Windows-Portable
+          path: source/OrtoGestion-Pro-Windows-Portable/dist/*.exe
+          if-no-files-found: error
+          retention-days: 14
+
