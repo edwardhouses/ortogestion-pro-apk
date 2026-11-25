@@ -9,6 +9,7 @@ on:
       - 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
       - 'OrtoGestion-Pro-Windows-Portable.zip'
       - '.github/workflows/audit-quality.yml'
+      - 'native/android/**'
   pull_request:
     branches:
       - main
@@ -88,6 +89,8 @@ jobs:
           unzip -q 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip' -d audit/android
           ROOT='audit/android/OrtoGestion-Pro-Android'
           test -f "$ROOT/tests/run-tests.sh"
+          python3 native/android/harden_android.py "$ROOT"
+          python3 native/android/test_hardening.py "$ROOT"
           bash "$ROOT/tests/run-tests.sh"
 
       - name: Extract Windows wrapper and run its test suite
@@ -183,6 +186,7 @@ jobs:
           name: OrtoGestion-Audit-Quality-Evidence
           path: |
             audit/html-sha256.txt
+            audit/native-wrapper-review.txt
             audit/js/
           if-no-files-found: warn
           retention-days: 14
