@@ -6,6 +6,7 @@ on:
 
 permissions:
   contents: write
+  actions: read
 
 jobs:
   extract-and-commit:
@@ -16,6 +17,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          token: ${{ secrets.ORTO_GITHUB_TOKEN }}
           persist-credentials: true
 
       - name: Verify and extract package
@@ -34,7 +36,7 @@ jobs:
 
           ROOT="_source_package"
           if [ ! -f "$ROOT/app/index.html" ]; then
-            CANDIDATE="$(find "$ROOT" -mindepth 2 -maxdepth 4 -type f -path '*/app/index.html' -print -quit)"
+            CANDIDATE="$(find "$ROOT" -mindepth 2 -maxdepth 5 -type f -path '*/app/index.html' -print -quit)"
             if [ -z "$CANDIDATE" ]; then
               echo "::error::No se encontró app/index.html"
               exit 1
