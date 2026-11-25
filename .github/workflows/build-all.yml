@@ -1,4 +1,3 @@
-
 name: Build OrtoGestion Pro APK and Windows Portable
 
 on:
@@ -9,8 +8,6 @@ on:
       - 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
       - 'OrtoGestion-Pro-Windows-Portable.zip'
       - '.github/workflows/build-all.yml'
-      - '.github/workflows/android-apk.yml'
-      - '.github/workflows/windows-portable.yml'
       - 'native/android/**'
       - 'native/windows/**'
 
