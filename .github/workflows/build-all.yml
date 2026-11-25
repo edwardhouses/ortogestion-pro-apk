@@ -1,3 +1,4 @@
+
 name: Build OrtoGestion Pro APK and Windows Portable
 
 on:
@@ -23,6 +24,7 @@ jobs:
     name: Build Android APK
     runs-on: ubuntu-latest
     timeout-minutes: 45
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -55,7 +57,7 @@ jobs:
       - name: Install Android SDK 35
         shell: bash
         run: |
-          yes | sdkmanager --licenses >/dev/null
+          set -euo pipefail
           sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
 
       - name: Set up Gradle 8.9
@@ -83,6 +85,7 @@ jobs:
     name: Build Windows portable EXE
     runs-on: windows-latest
     timeout-minutes: 45
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
