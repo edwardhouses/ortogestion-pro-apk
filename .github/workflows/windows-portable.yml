@@ -1,12 +1,7 @@
-
 name: Build OrtoGestion Pro Windows Portable EXE
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'OrtoGestion-Pro-Windows-Portable.zip'
-      - '.github/workflows/windows-portable.yml'
 
 permissions:
   contents: read
@@ -15,19 +10,25 @@ jobs:
   build-windows:
     runs-on: windows-latest
     timeout-minutes: 45
-
     steps:
-      - name: Download repository contents
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Extract Windows project
+      - name: Extract Windows wrapper and inject canonical HTML
         shell: pwsh
         run: |
+          if (!(Test-Path 'app/index.html')) { throw 'No se encontró app/index.html, la fuente única.' }
           Expand-Archive -LiteralPath 'OrtoGestion-Pro-Windows-Portable.zip' -DestinationPath 'source' -Force
-          if (!(Test-Path 'source/OrtoGestion-Pro-Windows-Portable/package.json')) { throw 'No se encontró package.json dentro del ZIP' }
-          if (!(Test-Path 'source/OrtoGestion-Pro-Windows-Portable/www/index.html')) { throw 'No se encontró la aplicación HTML' }
+          $root = 'source/OrtoGestion-Pro-Windows-Portable'
+          if (!(Test-Path "$root/package.json")) { throw 'No se encontró package.json' }
+          if (!(Test-Path "$root/main.js")) { throw 'No se encontró main.js' }
+          New-Item -ItemType Directory -Force -Path "$root/www" | Out-Null
+          Copy-Item -LiteralPath 'app/index.html' -Destination "$root/www/index.html" -Force
+          $a = (Get-FileHash 'app/index.html' -Algorithm SHA256).Hash
+          $b = (Get-FileHash "$root/www/index.html" -Algorithm SHA256).Hash
+          if ($a -ne $b) { throw 'El HTML copiado no coincide con la fuente única.' }
 
-      - name: Set up Node.js
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -51,4 +52,3 @@ jobs:
           path: source/OrtoGestion-Pro-Windows-Portable/dist/*.exe
           if-no-files-found: error
           retention-days: 14
-
