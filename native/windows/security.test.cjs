@@ -23,8 +23,8 @@ test("sirve index y archivos contenidos dentro de www", async () => {
   await fs.mkdir(path.join(root, "assets"));
   await fs.writeFile(path.join(root, "assets", "app.js"), "ok");
   try {
-    assert.equal(await resolveAppAsset(root, "/"), path.join(root, "index.html"));
-    assert.equal(await resolveAppAsset(root, "/assets/app.js"), path.join(root, "assets", "app.js"));
+    assert.equal(await resolveAppAsset(root, "/"), await fs.realpath(path.join(root, "index.html")));
+    assert.equal(await resolveAppAsset(root, "/assets/app.js"), await fs.realpath(path.join(root, "assets", "app.js")));
   } finally {
     await fs.rm(temp, { recursive: true, force: true });
   }
