@@ -83,6 +83,26 @@ jobs:
           done
           sha256sum app/index.html | tee audit/html-sha256.txt
 
+      - name: Validate clinical image category handling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path("app/index.html").read_text(encoding="utf-8")
+          checks = {
+              "radiograph and photo aliases": "radiografia:'rx'" in source and "fotografia:'foto'" in source,
+              "accent normalization": ".normalize('NFD')" in source and "replace(/[\\u0300-\\u036f]/g" in source,
+              "selected gallery category controls new upload": "const filtro=document.getElementById('filtro-img').value;let tipo=['foto','rx','modelo'].includes(filtro)?filtro:null;" in source,
+              "reclassification control exists": 'id="modal-img-tipo"' in source and 'id="btn-guardar-tipo-img"' in source,
+              "reclassification is audited and saved": "img.tipo=tipo;await appendAudit('imagen_categoria_actualizada'" in source,
+          }
+          for label, ok in checks.items():
+              print(("PASS" if ok else "FAIL") + " - " + label)
+          if not all(checks.values()):
+              raise SystemExit("Falló la validación de categorías de imágenes.")
+          PY
+
       - name: Extract Android wrapper and run its test suite
         shell: bash
         run: |
