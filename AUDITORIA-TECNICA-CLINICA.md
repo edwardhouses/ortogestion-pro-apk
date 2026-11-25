@@ -104,11 +104,12 @@ Revisión estática del HTML, workflows y contenido de los ZIP Android/Windows. 
 
 1. Pruebas funcionales manuales en Android y Windows: alta/edición/apertura/borrado de paciente, mediciones, imágenes, radiografías, visitas, inventario, backup y restore.
 2. Pruebas de migración con bases sintéticas de cada esquema anterior, incluyendo archivos de imagen asociados.
-3. Resolver y probar bloqueo de privacidad al pasar a segundo plano/minimizar, reautenticación y exposición de datos en pantalla reciente.
-4. Revisar el puente JavaScript Android y validar el aislamiento de origen/iframes; probar exportaciones, selector de archivos y archivos grandes.
-5. Pruebas de seguridad de los wrappers: XSS, navegación, traversal, almacenamiento persistente, recuperación de cuenta, fuerza bruta, sesiones, manipulación local y cadena de auditoría.
-6. Revisión clínica por ortodoncistas de cada fórmula, unidades, referencias, población, rangos y redondeos; pruebas con casos de referencia conocidos.
-7. Definir jurisdicción y requisitos de privacidad, consentimiento, retención, exportación y respuesta a incidentes.
-8. Confirmar que APK/EXE resultantes se instalan y ejecutan en dispositivos reales y que una actualización no sobrescribe ni pierde datos.
+3. Ejecutar pruebas manuales en Android y Windows del bloqueo de privacidad al pasar a segundo plano/minimizar/suspender, reautenticación y exposición de datos en vistas recientes.
+4. Validar en dispositivo real el `WebMessageListener`, el origen/iframes y los flujos de exportación/importación, incluidos cancelación y archivos grandes.
+5. Ejecutar pruebas de runtime del protocolo Electron (incluidos traversal y navegación) y comprobar la persistencia de IndexedDB/localStorage entre reinicios y sesiones de usuario.
+6. Pruebas de seguridad de los wrappers: XSS, navegación, traversal, almacenamiento persistente, recuperación de cuenta, fuerza bruta, sesiones, manipulación local y cadena de auditoría.
+7. Revisión clínica por ortodoncistas de cada fórmula, unidades, referencias, población, rangos y redondeos; pruebas con casos de referencia conocidos.
+8. Definir jurisdicción y requisitos de privacidad, consentimiento, retención, exportación y respuesta a incidentes.
+9. Confirmar que APK/EXE resultantes se instalan y ejecutan en dispositivos reales y que una actualización no sobrescribe ni pierde datos.
 
 **Conclusión:** el repositorio tiene una base automatizada útil, una fuente HTML central y wrappers con varias defensas relevantes. Sin embargo, la evidencia actual no permite declarar la aplicación clínicamente validada ni lista para manejar historias clínicas reales. Mantener esta rama como preparación y validación; no integrar a `main` ni distribuir una nueva versión clínica hasta cerrar los bloqueos.
