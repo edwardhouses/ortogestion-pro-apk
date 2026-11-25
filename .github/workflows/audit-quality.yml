@@ -109,66 +109,53 @@ jobs:
           python3 - <<'PY'
           from pathlib import Path
           from zipfile import ZipFile
-          import re
 
           targets = [
-              ("OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip", [
-                  r"(^|/)AndroidManifest\\.xml$",
-                  r"(^|/)MainActivity\\.kt$",
-                  r"(^|/)build\\.gradle\\.kts$",
-                  r"(^|/)settings\\.gradle\\.kts$",
-                  r"(^|/)gradle\\.properties$",
-                  r"(^|/)proguard-rules\\.pro$",
-                  r"(^|/)\\.java$",
-                  r"(^|/)\\.kt$",
-              ]),
-              ("OrtoGestion-Pro-Windows-Portable.zip", [
-                  r"(^|/)package\\.json$",
-                  r"(^|/)main\\.js$",
-                  r"(^|/)preload\\.js$",
-                  r"(^|/)\\.config\\.js$",
-                  r"(^|/)\\.yml$",
-                  r"(^|/)\\.yaml$",
-              ]),
+              ("OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip", (
+                  "AndroidManifest.xml", "MainActivity.kt", ".java", ".kt",
+                  "build.gradle.kts", "settings.gradle.kts", "gradle.properties",
+                  "proguard-rules.pro"
+              )),
+              ("OrtoGestion-Pro-Windows-Portable.zip", (
+                  "package.json", "main.js", "preload.js", ".config.js", ".yml", ".yaml"
+              )),
           ]
-          out = []
-          patterns = re.compile(
-              r"addJavascriptInterface|setJavaScriptEnabled|allowFileAccess|"
-              r"allowContentAccess|mixedContentMode|WebViewClient|WebChromeClient|"
-              r"shouldOverrideUrlLoading|onReceivedSslError|"
-              r"usesCleartextTraffic|networkSecurityConfig|debuggable|"
-              r"android:exported|requestLegacyExternalStorage|"
-              r"contextIsolation|nodeIntegration|webSecurity|"
-              r"shell\\.openExternal|will-navigate|setWindowOpenHandler|"
-              r"preload|sandbox|Content-Security-Policy|unsafe-eval|"
-              r"remote\\.require|child_process|exec\\("
+          keywords = (
+              "addJavascriptInterface", "setJavaScriptEnabled", "allowFileAccess",
+              "allowContentAccess", "mixedContentMode", "WebViewClient", "WebChromeClient",
+              "shouldOverrideUrlLoading", "onReceivedSslError", "usesCleartextTraffic",
+              "networkSecurityConfig", "debuggable", "android:exported",
+              "requestLegacyExternalStorage", "contextIsolation", "nodeIntegration",
+              "webSecurity", "shell.openExternal", "will-navigate", "setWindowOpenHandler",
+              "preload", "sandbox", "Content-Security-Policy", "unsafe-eval",
+              "remote.require", "child_process", "exec("
           )
-          for archive, regexes in targets:
-              out.append(f"\\n===== ARCHIVE: {archive} =====")
+          out = []
+          for archive, suffixes in targets:
+              out.append(f"\n===== ARCHIVE: {archive} =====")
               with ZipFile(archive) as z:
                   names = z.namelist()
                   out.append("ARCHIVE INVENTORY:")
                   out.extend(sorted(names))
-                  selected = []
-                  for name in names:
-                      if any(re.search(rx, name) for rx in regexes):
-                          if any(part in name.lower() for part in ("node_modules/", "build/", ".gradle/")):
-                              continue
-                          info = z.getinfo(name)
-                          if info.file_size > 180000:
-                              continue
-                          selected.append(name)
-                  for name in sorted(set(selected)):
+                  for name in sorted(names):
+                      if not name.endswith(suffixes):
+                          continue
+                      if any(part in name.lower() for part in ("node_modules/", "build/", ".gradle/")):
+                          continue
+                      info = z.getinfo(name)
+                      if info.file_size > 180000:
+                          continue
                       try:
                           body = z.read(name).decode("utf-8")
                       except (UnicodeDecodeError, KeyError):
                           continue
-                      out.append(f"\\n----- FILE: {name} -----")
+                      out.append(f"\n----- FILE: {name} -----")
                       out.append(body[:24000])
                       for number, line in enumerate(body.splitlines(), 1):
-                          if patterns.search(line):
-                              out.append(f"[SECURITY MATCH {name}:{number}] {line.strip()[:500]}")
-          report = "\\n".join(out)
+                          hits = [word for word in keywords if word in line]
+                          if hits:
+                              out.append(f"[REVIEW {name}:{number}] {', '.join(hits)} :: {line.strip()[:400]}")
+          report = "\n".join(out)
           Path("audit/native-wrapper-review.txt").write_text(report, encoding="utf-8")
           print(report[:110000])
           PY
