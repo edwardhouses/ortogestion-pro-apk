@@ -2,6 +2,13 @@ name: Build OrtoGestion Pro Windows Portable EXE
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - 'audit/**'
+    paths:
+      - 'native/windows/**'
+      - '.github/workflows/windows-portable.yml'
+      - 'OrtoGestion-Pro-Windows-Portable.zip'
 
 permissions:
   contents: read
@@ -27,6 +34,8 @@ jobs:
           $a = (Get-FileHash 'app/index.html' -Algorithm SHA256).Hash
           $b = (Get-FileHash "$root/www/index.html" -Algorithm SHA256).Hash
           if ($a -ne $b) { throw 'El HTML copiado no coincide con la fuente única.' }
+          python native/windows/apply_windows_hardening.py $root
+          python native/windows/test_hardening.py $root
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
@@ -48,7 +57,7 @@ jobs:
       - name: Upload portable EXE
         uses: actions/upload-artifact@v4
         with:
-          name: OrtoGestion-Pro-2.1-Windows-Portable
+          name: OrtoGestion-Pro-2.1-security-test-Windows-Portable
           path: source/OrtoGestion-Pro-Windows-Portable/dist/*.exe
           if-no-files-found: error
           retention-days: 14
