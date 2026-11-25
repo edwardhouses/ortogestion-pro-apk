@@ -10,6 +10,7 @@ on:
       - 'OrtoGestion-Pro-Windows-Portable.zip'
       - '.github/workflows/audit-quality.yml'
       - 'native/android/**'
+      - 'native/windows/**'
   pull_request:
     branches:
       - main
@@ -101,6 +102,8 @@ jobs:
           ROOT='audit/windows/OrtoGestion-Pro-Windows-Portable'
           test -f "$ROOT/package.json"
           test -f "$ROOT/main.js"
+          python3 native/windows/apply_windows_hardening.py "$ROOT"
+          python3 native/windows/test_hardening.py "$ROOT"
           cd "$ROOT"
           npm install --no-audit --no-fund
           npm test
