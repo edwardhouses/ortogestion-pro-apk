@@ -90,6 +90,10 @@ Revisión estática del HTML, workflows y contenido de los ZIP Android/Windows. 
 ## Cambios aplicados en esta rama
 
 - Se añadió un control de calidad automatizado para comprobar sintaxis de scripts embebidos, ejecutar las pruebas incluidas en los wrappers e inspeccionar configuración/código nativo Android y Windows.
+- Se añadió una corrección reproducible del wrapper Android en `native/android/harden_android.py`: sustituye `addJavascriptInterface` por `WebViewCompat.addWebMessageListener`, restringe el origen a `https://appassets.androidplatform.net`, valida de nuevo el origen y rechaza mensajes que no procedan del marco principal.
+- Se añadió cierre de sesión nativo al entrar en estado detenido (`onStop`), invocando la función de cierre de sesión existente en el HTML. Se conserva una excepción mientras están activos el selector de archivos de importación o el diálogo de destino de exportación para no interrumpir esas operaciones.
+- Se añadieron pruebas de regresión en `native/android/test_hardening.py` para verificar origen, marco principal, límites de tamaño, eliminación del puente antiguo y comportamiento de ciclo de vida.
+- La ejecución GitHub Actions `45533964544` terminó en verde: pruebas estáticas y compilación real de APK debug correctiva. Artefacto de prueba: `OrtoGestion-Pro-2.1-security-test-apk` (ID `14986305660`, ~2,57 MB). No se instaló ni ejecutó en un teléfono durante esta validación.
 - La ejecución `45533256770` terminó con éxito y publicó el artefacto `OrtoGestion-Audit-Quality-Evidence` (SHA-256 `a03180d73f9d315beffd0205f0b0d24d398cbeb70669ff396e7a0b827b6439f5`).
 - No se cambian fórmulas clínicas, permisos de usuario, esquema de base de datos, cifrado ni datos. Esas modificaciones requieren especificación y pruebas de regresión que aún no están disponibles.
 
