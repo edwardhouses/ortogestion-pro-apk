@@ -60,4 +60,5 @@ jobs:
           name: OrtoGestion-Pro-2.1-debug-apk
           path: source/OrtoGestion-Pro-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
+          retention-days: 30
           retention-days: 14
