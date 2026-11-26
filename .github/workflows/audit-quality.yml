@@ -121,11 +121,13 @@ jobs:
               "oral accidents and habits": 'name="hc_traumatismoDiente"' in source and 'name="hc_succionDigitalAnterior"' in source,
               "functional and facial examination": 'name="hc_deglucionInterposicion"' in source and 'name="hc_tipoPerfil"' in source,
               "intraoral and occlusion examination": 'name="hc_tejidosBlandos"' in source and 'name="hc_clasificacionOclusion"' in source,
-              "models and radiographic conclusions": 'name="hc_moyersDisponibleSup"' in source and 'name="hc_conclusionesCefalometricas"' in source,
+              "models and radiographic conclusions": 'name="hc_conclusionesModelos"' in source and 'name="hc_conclusionesCefalometricas"' in source,
               "separate history tab and summary": 'data-tab="historia"' in source and 'id="historiaOrtoResumen"' in source,
-              "form persistence": "historiaOrto:getOrthoIntakeFromForm(f)" in source,
+              "form persistence preserves legacy fields on edit": "getOrthoIntakeFromForm(f,existingPatient?.historiaOrto||{})" in source,
               "edit form restores saved values": "Object.entries(p.historiaOrto||{})" in source,
               "summary renders saved values": "function renderOrthoIntake(p)" in source,
+              "no duplicate clinical inputs": all(f'name="{field}"' not in source and f'"name":"{field}"' not in source for field in ("habitos","atm","hc_enfermedadesSistemicas","hc_enfermedadesEndocrinas","hc_enfermedadesRespiratorias","hc_enfermedadesGingivales","hc_resalteIncisivo","hc_sobremordida","hc_diametrosMesiodistales","hc_moyersDisponibleSup","hc_moyersNecesarioSup","hc_moyersDisponibleInf","hc_moyersNecesarioInf","hc_indiceIncisivoSup","hc_indiceIncisivoInf","hc_estudioTransversalModelos")),
+              "habits and ATM remain structured and mapped to legacy summaries": "summarizeOrthoHabits(intake" in source and "summarizeOrthoATM(intake" in source,
               "audit tracks structured history": "'consentEvidence','notas','historiaOrto'" in source,
           }
           for label, ok in required.items():
