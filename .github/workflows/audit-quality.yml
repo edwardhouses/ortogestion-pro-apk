@@ -105,6 +105,33 @@ jobs:
               raise SystemExit("Falló la validación de categorías de imágenes.")
           PY
 
+      - name: Validate ordered orthodontic history form and persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path("app/index.html").read_text(encoding="utf-8")
+          required = {
+              "ordered intake metadata": "const ORTHO_INTAKE_SECTIONS=" in source,
+              "patient identification extension": 'name="hc_direccion"' in source and 'name="hc_fechaIngreso"' in source,
+              "interrogatory fields": 'name="hc_motivoConsulta"' in source and 'name="hc_historiaDisgnatia"' in source,
+              "oral accidents and habits": 'name="hc_traumatismoDiente"' in source and 'name="hc_succionDigitalAnterior"' in source,
+              "functional and facial examination": 'name="hc_deglucionInterposicion"' in source and 'name="hc_tipoPerfil"' in source,
+              "intraoral and occlusion examination": 'name="hc_tejidosBlandos"' in source and 'name="hc_clasificacionOclusion"' in source,
+              "models and radiographic conclusions": 'name="hc_moyersDisponibleSup"' in source and 'name="hc_conclusionesCefalometricas"' in source,
+              "separate history tab and summary": 'data-tab="historia"' in source and 'id="historiaOrtoResumen"' in source,
+              "form persistence": "historiaOrto:getOrthoIntakeFromForm(f)" in source,
+              "edit form restores saved values": "Object.entries(p.historiaOrto||{})" in source,
+              "summary renders saved values": "function renderOrthoIntake(p)" in source,
+              "audit tracks structured history": "'consentEvidence','notas','historiaOrto'" in source,
+          }
+          for label, ok in required.items():
+              print(("PASS" if ok else "FAIL") + " - " + label)
+          if not all(required.values()):
+              raise SystemExit("Falló la validación de la historia ortodóncica estructurada.")
+          PY
+
       - name: Extract Android wrapper and run its test suite
         shell: bash
         run: |
