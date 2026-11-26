@@ -79,7 +79,7 @@ jobs:
           name: OrtoGestion-Pro-2.1-debug-apk
           path: source/OrtoGestion-Pro-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
 
   build-windows:
     name: Build Windows portable EXE
@@ -129,4 +129,4 @@ jobs:
           name: OrtoGestion-Pro-2.1-Windows-Portable
           path: source/OrtoGestion-Pro-Windows-Portable/dist/*.exe
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 30
