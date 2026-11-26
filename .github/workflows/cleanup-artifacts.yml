@@ -1,0 +1,103 @@
+name: OrtoGestion Pro - Artifact retention cleanup
+
+on:
+  schedule:
+    - cron: "23 6 * * 1"
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Preview only; do not delete anything"
+        required: true
+        type: boolean
+        default: true
+
+permissions:
+  actions: write
+  contents: read
+
+concurrency:
+  group: ortogestion-artifact-retention
+  cancel-in-progress: false
+
+jobs:
+  cleanup:
+    name: Keep latest APK, EXE and audit artifacts
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Prune old application artifacts safely
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+            const manualDryRun = context.eventName === "workflow_dispatch"
+              && core.getInput("dry_run") === "true";
+            const dryRun = context.eventName === "workflow_dispatch"
+              ? manualDryRun
+              : false;
+
+            // Only these exact application artifact names are eligible for pruning.
+            // Unknown artifact names are always left untouched.
+            const keepCounts = new Map([
+              ["OrtoGestion-Pro-2.1-debug-apk", 2],
+              ["OrtoGestion-Pro-2.1-Windows-Portable", 2],
+            ]);
+            const auditPattern = /(audit|quality|dictamen|informe)/i;
+            const auditKeepCount = 10;
+
+            const artifacts = await github.paginate(
+              github.rest.actions.listArtifactsForRepo,
+              { owner, repo, per_page: 100 }
+            );
+
+            const groups = new Map();
+            for (const artifact of artifacts) {
+              let keep = keepCounts.get(artifact.name);
+              if (keep === undefined && auditPattern.test(artifact.name)) {
+                keep = auditKeepCount;
+              }
+              if (keep === undefined || artifact.expired) continue;
+              if (!groups.has(artifact.name)) groups.set(artifact.name, { keep, items: [] });
+              groups.get(artifact.name).items.push(artifact);
+            }
+
+            let planned = 0;
+            let deleted = 0;
+            for (const [name, group] of groups) {
+              group.items.sort((a, b) =>
+                new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+              );
+              const obsolete = group.items.slice(group.keep);
+              core.info(name + ": " + Math.min(group.items.length, group.keep)
+                + " kept; " + obsolete.length + " eligible for deletion.");
+
+              for (const artifact of obsolete) {
+                planned++;
+                const details = name + " (id " + artifact.id + ", created "
+                  + artifact.created_at + ")";
+                if (dryRun) {
+                  core.info("[DRY RUN] Would delete " + details);
+                } else {
+                  await github.rest.actions.deleteArtifact({
+                    owner, repo, artifact_id: artifact.id
+                  });
+                  deleted++;
+                  core.info("Deleted " + details);
+                }
+              }
+            }
+
+            core.summary
+              .addHeading("OrtoGestion Pro artifact cleanup")
+              .addTable([
+                [{data:"Mode",header:true},{data:"Eligible",header:true},{data:"Deleted",header:true}],
+                [dryRun ? "Preview only" : "Applied", String(planned), String(deleted)]
+              ])
+              .addList([
+                "Keeps the latest 2 APK artifacts.",
+                "Keeps the latest 2 Windows portable EXE artifacts.",
+                "Keeps the latest 10 artifacts whose names identify audits or reports.",
+                "Does not delete workflow runs, source files, releases, or unknown artifact names."
+              ]);
+            await core.summary.write();
