@@ -93,7 +93,9 @@ jobs:
           checks = {
               "radiograph and photo aliases": "radiografia:'rx'" in source and "fotografia:'foto'" in source,
               "accent normalization": ".normalize('NFD')" in source and "replace(/[\\u0300-\\u036f]/g" in source,
-              "selected gallery category controls new upload": "const filtro=document.getElementById('filtro-img').value;let tipo=['foto','rx','modelo'].includes(filtro)?filtro:null;" in source,
+              "upload category is explicit and separate from display filter": 'id="tipo-nueva-img"' in source and 'id="filtro-img"' in source,
+              "upload handler reads explicit category, not display filter": "normalizeImageType(document.getElementById('tipo-nueva-img').value)" in source and "const filtro=document.getElementById('filtro-img').value;let tipo=" not in source,
+              "radiograph option exists for uploads": '<option value="rx">Radiografía</option>' in source,
               "reclassification control exists": 'id="modal-img-tipo"' in source and 'id="btn-guardar-tipo-img"' in source,
               "reclassification is audited and saved": "img.tipo=tipo;await appendAudit('imagen_categoria_actualizada'" in source,
           }
