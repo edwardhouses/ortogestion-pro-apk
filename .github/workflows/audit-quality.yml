@@ -1,0 +1,248 @@
+name: OrtoGestion Pro - Audit quality gate
+
+on:
+  push:
+    branches:
+      - 'audit/**'
+    paths:
+      - 'app/index.html'
+      - 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
+      - 'OrtoGestion-Pro-Windows-Portable.zip'
+      - '.github/workflows/audit-quality.yml'
+      - 'native/android/**'
+      - 'native/windows/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'app/index.html'
+      - 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
+      - 'OrtoGestion-Pro-Windows-Portable.zip'
+      - '.github/workflows/audit-quality.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  source-and-wrapper-tests:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Validate HTML and inline JavaScript syntax
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s app/index.html
+          mkdir -p audit/js
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+
+          class Scripts(HTMLParser):
+              def __init__(self):
+                  super().__init__()
+                  self.current = None
+                  self.parts = []
+                  self.scripts = []
+
+              def handle_starttag(self, tag, attrs):
+                  if tag.lower() == "script":
+                      attrs = dict(attrs)
+                      self.current = [] if "src" not in attrs and attrs.get("type", "").lower() not in ("application/json", "application/ld+json", "importmap") else None
+
+              def handle_data(self, data):
+                  if self.current is not None:
+                      self.current.append(data)
+
+              def handle_endtag(self, tag):
+                  if tag.lower() == "script" and self.current is not None:
+                      self.scripts.append("".join(self.current))
+                      self.current = None
+
+          source = Path("app/index.html").read_text(encoding="utf-8")
+          parser = Scripts()
+          parser.feed(source)
+          if not parser.scripts:
+              raise SystemExit("No se encontraron scripts JavaScript inline para validar.")
+          for index, script in enumerate(parser.scripts, 1):
+              Path(f"audit/js/inline-{index}.js").write_text(script, encoding="utf-8")
+          print(f"Scripts inline encontrados: {len(parser.scripts)}")
+          PY
+          for file in audit/js/*.js; do
+            echo "Comprobando sintaxis: $file"
+            node --check "$file"
+          done
+          sha256sum app/index.html | tee audit/html-sha256.txt
+
+      - name: Validate clinical image category handling
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path("app/index.html").read_text(encoding="utf-8")
+          checks = {
+              "radiograph and photo aliases": "radiografia:'rx'" in source and "fotografia:'foto'" in source,
+              "accent normalization": ".normalize('NFD')" in source and "replace(/[\\u0300-\\u036f]/g" in source,
+              "upload category is explicit and separate from display filter": 'id="tipo-nueva-img"' in source and 'id="filtro-img"' in source,
+              "upload handler reads explicit category, not display filter": "normalizeImageType(document.getElementById('tipo-nueva-img').value)" in source and "const filtro=document.getElementById('filtro-img').value;let tipo=" not in source,
+              "radiograph option exists for uploads": '<option value="rx">Radiografía</option>' in source,
+              "reclassification control exists": 'id="modal-img-tipo"' in source and 'id="btn-guardar-tipo-img"' in source,
+              "reclassification is audited and saved": "img.tipo=tipo;await appendAudit('imagen_categoria_actualizada'" in source,
+          }
+          for label, ok in checks.items():
+              print(("PASS" if ok else "FAIL") + " - " + label)
+          if not all(checks.values()):
+              raise SystemExit("Falló la validación de categorías de imágenes.")
+          PY
+
+      - name: Validate ordered orthodontic history form and persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          source = Path("app/index.html").read_text(encoding="utf-8")
+          required = {
+              "ordered intake metadata": "const ORTHO_INTAKE_SECTIONS=" in source,
+              "patient identification extension": 'name="hc_direccion"' in source and 'name="hc_fechaIngreso"' in source,
+              "hygiene has one canonical field and is not repeated in the history summary": source.count('name="higiene"') == 1 and 'name="hc_higieneBucalFormulario"' not in source and '"name":"higiene","label":"Higiene oral"' not in source,
+              "legacy hygiene value remains readable and migrates on edit": "values.hc_higieneBucalFormulario" in source and "p.historiaOrto.hc_higieneBucalFormulario" in source,
+              "interrogatory fields": 'name="hc_motivoConsulta"' in source and 'name="hc_historiaDisgnatia"' in source,
+              "oral accidents and habits": 'name="hc_traumatismoDiente"' in source and 'name="hc_succionDigitalAnterior"' in source,
+              "functional and facial examination": 'name="hc_deglucionInterposicion"' in source and 'name="hc_tipoPerfil"' in source,
+              "intraoral and occlusion examination": 'name="hc_tejidosBlandos"' in source and 'name="hc_clasificacionOclusion"' in source,
+              "models and radiographic conclusions": 'name="hc_conclusionesModelos"' in source and 'name="hc_conclusionesCefalometricas"' in source,
+              "separate history tab and summary": 'data-tab="historia"' in source and 'id="historiaOrtoResumen"' in source,
+              "form persistence preserves legacy fields on edit": "getOrthoIntakeFromForm(f,existingPatient?.historiaOrto||{})" in source,
+              "edit form restores saved values": "Object.entries(p.historiaOrto||{})" in source,
+              "summary renders saved values": "function renderOrthoIntake(p)" in source,
+              "no duplicate clinical inputs": all(f'name="{field}"' not in source and f'"name":"{field}"' not in source for field in ("habitos","atm","hc_enfermedadesSistemicas","hc_enfermedadesEndocrinas","hc_enfermedadesRespiratorias","hc_enfermedadesGingivales","hc_resalteIncisivo","hc_sobremordida","hc_diametrosMesiodistales","hc_moyersDisponibleSup","hc_moyersNecesarioSup","hc_moyersDisponibleInf","hc_moyersNecesarioInf","hc_indiceIncisivoSup","hc_indiceIncisivoInf","hc_estudioTransversalModelos")),
+              "habits and ATM remain structured and mapped to legacy summaries": "summarizeOrthoHabits(intake" in source and "summarizeOrthoATM(intake" in source,
+              "audit tracks structured history": "'consentEvidence','notas','historiaOrto'" in source,
+          }
+          for label, ok in required.items():
+              print(("PASS" if ok else "FAIL") + " - " + label)
+          if not all(required.values()):
+              raise SystemExit("Falló la validación de la historia ortodóncica estructurada.")
+          PY
+
+      - name: Extract Android wrapper and run its test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip' -d audit/android
+          ROOT='audit/android/OrtoGestion-Pro-Android'
+          test -f "$ROOT/tests/run-tests.sh"
+          python3 native/android/harden_android.py "$ROOT"
+          python3 native/android/test_hardening.py "$ROOT"
+          bash "$ROOT/tests/run-tests.sh"
+
+      - name: Extract Windows wrapper and run its test suite
+        shell: bash
+        run: |
+          set -euo pipefail
+          unzip -q 'OrtoGestion-Pro-Windows-Portable.zip' -d audit/windows
+          ROOT='audit/windows/OrtoGestion-Pro-Windows-Portable'
+          test -f "$ROOT/package.json"
+          test -f "$ROOT/main.js"
+          python3 native/windows/apply_windows_hardening.py "$ROOT"
+          python3 native/windows/test_hardening.py "$ROOT"
+          cd "$ROOT"
+          npm install --no-audit --no-fund
+          npm test
+
+      - name: Inspect native wrapper configuration and security-sensitive source
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          from pathlib import Path
+          from zipfile import ZipFile
+
+          targets = [
+              ("OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip", (
+                  "AndroidManifest.xml", "MainActivity.kt", ".java", ".kt",
+                  "build.gradle.kts", "settings.gradle.kts", "gradle.properties",
+                  "proguard-rules.pro"
+              )),
+              ("OrtoGestion-Pro-Windows-Portable.zip", (
+                  "package.json", "main.js", "preload.js", ".config.js", ".yml", ".yaml"
+              )),
+          ]
+          keywords = (
+              "addJavascriptInterface", "setJavaScriptEnabled", "allowFileAccess",
+              "allowContentAccess", "mixedContentMode", "WebViewClient", "WebChromeClient",
+              "shouldOverrideUrlLoading", "onReceivedSslError", "usesCleartextTraffic",
+              "networkSecurityConfig", "debuggable", "android:exported",
+              "requestLegacyExternalStorage", "contextIsolation", "nodeIntegration",
+              "webSecurity", "shell.openExternal", "will-navigate", "setWindowOpenHandler",
+              "preload", "sandbox", "Content-Security-Policy", "unsafe-eval",
+              "remote.require", "child_process", "exec("
+          )
+          out = []
+          for archive, suffixes in targets:
+              out.append(f"\n===== ARCHIVE: {archive} =====")
+              with ZipFile(archive) as z:
+                  names = z.namelist()
+                  out.append("ARCHIVE INVENTORY:")
+                  out.extend(sorted(names))
+                  for name in sorted(names):
+                      if not name.endswith(suffixes):
+                          continue
+                      if any(part in name.lower() for part in ("node_modules/", "build/", ".gradle/")):
+                          continue
+                      info = z.getinfo(name)
+                      if info.file_size > 180000:
+                          continue
+                      try:
+                          body = z.read(name).decode("utf-8")
+                      except (UnicodeDecodeError, KeyError):
+                          continue
+                      out.append(f"\n----- FILE: {name} -----")
+                      out.append(body[:24000])
+                      for number, line in enumerate(body.splitlines(), 1):
+                          hits = [word for word in keywords if word in line]
+                          if hits:
+                              out.append(f"[REVIEW {name}:{number}] {', '.join(hits)} :: {line.strip()[:400]}")
+          report = "\n".join(out)
+          Path("audit/native-wrapper-review.txt").write_text(report, encoding="utf-8")
+          print(report[:110000])
+          PY
+
+      - name: Publish audit summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## OrtoGestión Pro — control de calidad"
+            echo ""
+            echo "Este control valida sintaxis JavaScript y ejecuta las pruebas incluidas en los wrappers."
+            echo "No sustituye pruebas clínicas, pruebas manuales de runtime, pentest ni validación regulatoria."
+            echo ""
+            if [ -f audit/html-sha256.txt ]; then
+              echo 'HTML fuente:'
+              cat audit/html-sha256.txt
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: OrtoGestion-Audit-Quality-Evidence
+          path: |
+            audit/html-sha256.txt
+            audit/native-wrapper-review.txt
+            audit/js/
+          if-no-files-found: warn
+          retention-days: 14

@@ -1,5 +1,6 @@
-
 name: Build OrtoGestion Pro APK and Windows Portable
+
+# Rebuild both packages whenever the canonical HTML or packaging workflow changes.
 
 on:
   workflow_dispatch:
@@ -9,8 +10,8 @@ on:
       - 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
       - 'OrtoGestion-Pro-Windows-Portable.zip'
       - '.github/workflows/build-all.yml'
-      - '.github/workflows/android-apk.yml'
-      - '.github/workflows/windows-portable.yml'
+      - 'native/android/**'
+      - 'native/windows/**'
 
 permissions:
   contents: read
@@ -43,6 +44,8 @@ jobs:
           mkdir -p "$ROOT/app/src/main/assets/www"
           cp app/index.html "$ROOT/app/src/main/assets/www/index.html"
           cmp -s app/index.html "$ROOT/app/src/main/assets/www/index.html"
+          python3 native/android/harden_android.py "$ROOT"
+          python3 native/android/test_hardening.py "$ROOT"
           sha256sum app/index.html "$ROOT/app/src/main/assets/www/index.html"
 
       - name: Set up Java 17
@@ -76,7 +79,7 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: OrtoGestion-Pro-2.1-debug-apk
+          name: OrtoGestion-Pro-2.1-security-test-apk
           path: source/OrtoGestion-Pro-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 14
@@ -105,6 +108,8 @@ jobs:
           $b = (Get-FileHash "$root/www/index.html" -Algorithm SHA256).Hash
           if ($a -ne $b) { throw 'El HTML copiado no coincide con la fuente única.' }
           Write-Host "SHA256 HTML: $a"
+          python native/windows/apply_windows_hardening.py $root
+          python native/windows/test_hardening.py $root
 
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
@@ -126,7 +131,7 @@ jobs:
       - name: Upload portable EXE
         uses: actions/upload-artifact@v4
         with:
-          name: OrtoGestion-Pro-2.1-Windows-Portable
+          name: OrtoGestion-Pro-2.1-security-test-Windows-Portable
           path: source/OrtoGestion-Pro-Windows-Portable/dist/*.exe
           if-no-files-found: error
           retention-days: 14
