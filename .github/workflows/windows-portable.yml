@@ -12,7 +12,7 @@ jobs:
     timeout-minutes: 45
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Extract Windows wrapper and inject canonical HTML
         shell: pwsh
@@ -29,7 +29,7 @@ jobs:
           if ($a -ne $b) { throw 'El HTML copiado no coincide con la fuente única.' }
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -46,7 +46,7 @@ jobs:
         run: npm run dist:win
 
       - name: Upload portable EXE
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: OrtoGestion-Pro-2.1-Windows-Portable
           path: source/OrtoGestion-Pro-Windows-Portable/dist/*.exe
