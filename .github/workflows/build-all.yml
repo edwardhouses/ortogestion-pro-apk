@@ -1,5 +1,7 @@
 name: Build OrtoGestion Pro APK and Windows Portable
 
+# Rebuild both packages whenever the canonical HTML or packaging workflow changes.
+
 on:
   workflow_dispatch:
   push:
