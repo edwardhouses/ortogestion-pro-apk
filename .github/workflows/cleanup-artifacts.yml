@@ -31,11 +31,16 @@ jobs:
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const manualDryRun = context.eventName === "workflow_dispatch"
-              && core.getInput("dry_run") === "true";
-            const dryRun = context.eventName === "workflow_dispatch"
-              ? manualDryRun
+            const isManualRun = context.eventName === "workflow_dispatch";
+            // workflow_dispatch values are provided by the event payload, not action inputs.
+            // Default to preview mode if the input is missing or unrecognized (fail safe).
+            const requestedDryRun = context.payload.inputs?.dry_run;
+            const dryRun = isManualRun
+              ? !(requestedDryRun === false || String(requestedDryRun).toLowerCase() === "false")
               : false;
+
+            core.info("Trigger: " + context.eventName);
+            core.info("Dry run (preview only): " + String(dryRun));
 
             // Only these exact application artifact names are eligible for pruning.
             // Unknown artifact names are always left untouched.
