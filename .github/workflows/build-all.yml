@@ -6,7 +6,6 @@ on:
     paths:
       - 'app/index.html'
       - 'OrtoGestion-Pro-Windows-Portable.zip'
-      - '.github/workflows/windows-portable.yml'
 
 permissions:
   contents: read
