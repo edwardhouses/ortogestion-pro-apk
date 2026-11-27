@@ -2,6 +2,13 @@ name: Build OrtoGestion Pro Windows Portable EXE
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/android-v22-drive-camera-gis
+    paths:
+      - 'app/index.html'
+      - 'OrtoGestion-Pro-Windows-Portable.zip'
+      - '.github/workflows/windows-portable.yml'
 
 permissions:
   contents: read
@@ -48,7 +55,7 @@ jobs:
       - name: Upload portable EXE
         uses: actions/upload-artifact@v6
         with:
-          name: OrtoGestion-Pro-2.1-Windows-Portable
+          name: OrtoGestion-Pro-2.2-Windows-Portable
           path: source/OrtoGestion-Pro-Windows-Portable/dist/*.exe
           if-no-files-found: error
           retention-days: 30
