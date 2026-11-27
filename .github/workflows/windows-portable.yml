@@ -31,6 +31,10 @@ jobs:
           if (!(Test-Path "$root/main.js")) { throw 'No se encontró main.js' }
           New-Item -ItemType Directory -Force -Path "$root/www" | Out-Null
           Copy-Item -LiteralPath 'app/index.html' -Destination "$root/www/index.html" -Force
+          $packagePath = "$root/package.json"
+          $package = Get-Content -Raw $packagePath | ConvertFrom-Json
+          $package.version = '2.2.0'
+          $package | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 $packagePath
           $a = (Get-FileHash 'app/index.html' -Algorithm SHA256).Hash
           $b = (Get-FileHash "$root/www/index.html" -Algorithm SHA256).Hash
           if ($a -ne $b) { throw 'El HTML copiado no coincide con la fuente única.' }
@@ -51,6 +55,15 @@ jobs:
       - name: Build portable Windows EXE
         working-directory: source/OrtoGestion-Pro-Windows-Portable
         run: npm run dist:win
+      - name: Normalize portable executable version name
+        shell: pwsh
+        working-directory: source/OrtoGestion-Pro-Windows-Portable
+        run: |
+          $exe = Get-ChildItem 'dist/*.exe' | Select-Object -First 1
+          if (!$exe) { throw 'No se generó el EXE portátil.' }
+          if ($exe.Name -ne 'OrtoGestion-Pro-2.2-portable-x64.exe') {
+            Rename-Item -LiteralPath $exe.FullName -NewName 'OrtoGestion-Pro-2.2-portable-x64.exe' -Force
+          }
 
       - name: Upload portable EXE
         uses: actions/upload-artifact@v6
