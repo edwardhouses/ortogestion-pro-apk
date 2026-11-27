@@ -21,7 +21,7 @@ La integración de código no crea ni configura un proyecto Google Cloud. Para h
 5. La clave debug que GitHub Actions crea de forma efímera no es una identidad estable. Para pruebas iniciales se puede registrar su SHA-1 y usar el APK de esa misma ejecución. Para distribución se necesita una clave de firma release estable, protegida como GitHub Actions Secrets; nunca se debe subir al repositorio ni compartir por chat.
 6. La aplicación solicita el permiso `drive.file` en el momento de usar Drive. La autorización puede necesitar consentimiento del usuario.
 
-La app conserva el funcionamiento local si el usuario no autoriza Drive. El acceso de Drive se mantiene en memoria con un token de corta duración; al reiniciar la app el usuario puede tener que volver a tocar «Conectar».
+La app conserva el funcionamiento local si el usuario no autoriza Drive. El acceso de Drive se mantiene en memoria con un token de corta duración; al reiniciar la app el usuario puede tener que volver a tocar «Conectar». El botón «Desconectar» elimina el token de memoria de esta ejecución, pero no revoca el consentimiento concedido a Google; para revocar ese consentimiento, el usuario debe quitar el acceso de OrtoGestión Pro desde la configuración de seguridad de su cuenta Google.
 
 ## Límites de validación
 
