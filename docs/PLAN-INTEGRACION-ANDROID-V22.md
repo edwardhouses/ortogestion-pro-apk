@@ -1,44 +1,46 @@
-# Integración Android v2.2 — ejecución segura por etapas
+# OrtoGestión Pro Android v2.2 — integración en rama aislada
 
 ## Rama de trabajo
-`feature/android-drive-oauth-qr-v22`
+`feature/android-v22-drive-camera-gis`
 
-Esta rama parte de `main`. No modifica `main`, el HTML clínico ni los ZIP originales. El primer paso es obtener y revisar los archivos nativos reales del wrapper antes de aplicar parches.
+Esta implementación se mantiene separada de `main`. El wrapper ZIP original y el HTML clínico canónico no se modifican. El workflow extrae el ZIP y aplica un overlay de fuentes Android versionadas en el repositorio.
 
-## Por qué se añadió una inspección previa
-El proyecto Android está almacenado en el repositorio como un ZIP binario. La documentación de integración describe los cambios deseados, pero no sustituye la inspección de `MainActivity.kt`, el manifiesto y Gradle reales. No es seguro aplicar reemplazos de texto sobre archivos que todavía no se han inspeccionado.
+## Cambios incluidos en el overlay
 
-El workflow `Inspect Android wrapper sources (read-only)` extrae el ZIP y publica durante 7 días un artefacto con:
-- `MainActivity.kt`
-- `AndroidManifest.xml`
-- `app/build.gradle.kts`
-- archivos Gradle relevantes
-- inventario de recursos Android y pruebas existentes
+1. Puente nativo `OrtoNubeBridge` conectado al contrato JavaScript que ya existe en `app/index.html`.
+2. Google Identity Services `AuthorizationClient` para solicitar el permiso Drive solo cuando el usuario lo necesita.
+3. Alcance mínimo `drive.file`; no se usa OAuth dentro de WebView, Client Secret ni refresh token almacenado por la app.
+4. Listar, crear carpeta, subir mediante sesión resumible, descargar y enviar a papelera respaldos `.ogbackup` cifrados.
+5. Permiso CAMERA en manifiesto y solicitud en tiempo de ejecución. El WebView solo recibe el recurso de vídeo y únicamente desde el origen local de la app.
+6. Se conserva la elección de fotografía/archivo como alternativa al escaneo por cámara.
+7. Versión Android 2.2.0 / versionCode 22 y artefacto APK v2.2.
+8. Pruebas estáticas adicionales y compilación en GitHub Actions.
 
-El workflow es estrictamente de lectura: no altera ni vuelve a empaquetar la aplicación.
+## Archivos principales
 
-## Implementación prevista tras revisar el artefacto
+- `android-overlay/app/src/main/java/com/ortogestion/pro/MainActivity.kt`
+- `android-overlay/app/src/main/java/com/ortogestion/pro/OrtoNubeBridge.kt`
+- `android-overlay/app/src/main/AndroidManifest.xml`
+- `android-overlay/app/build.gradle.kts`
+- `.github/workflows/android-apk.yml`
 
-1. Integrar el puente `OrtoNube.kt` con llamadas JavaScript seguras, validación del estado OAuth, PKCE, gestión de refresh token y llamadas a Drive.
-2. Añadir callback OAuth mediante navegador del sistema y App Link/deep link validado; no usar WebView embebido para iniciar sesión.
-3. Añadir permiso de cámara en ejecución y conceder a WebView únicamente `RESOURCE_VIDEO_CAPTURE`; denegar cualquier otro recurso.
-4. Mantener selección de imagen como alternativa sin cámara.
-5. Actualizar versionCode/versionName a 22/2.2.0 y nombres de artefactos.
-6. Añadir pruebas estáticas y compilación APK en esta rama.
-7. Revisar el diff y los resultados antes de solicitar aprobación. No fusionar el PR.
+## Configuración que todavía depende del propietario del proyecto
 
-## Requisitos externos para que Google Drive funcione realmente
+Google Drive no se puede habilitar para una cuenta real hasta configurar Google Cloud:
 
-- Un OAuth client ID correctamente configurado en Google Cloud.
-- Proyecto Google Cloud con Drive API habilitada y pantalla de consentimiento configurada.
-- Una clave de firma Android de release estable. El SHA-1 del keystore de debug efímero de GitHub Actions cambia entre ejecuciones y no sirve para una integración OAuth estable.
-- El keystore y sus contraseñas deben añadirse como GitHub Actions Secrets; nunca deben guardarse en el repositorio ni en el ZIP.
-- No solicitar acceso completo a Drive. Usar el alcance mínimo `drive.file` cuando sea suficiente.
+- Habilitar Google Drive API y completar la pantalla de consentimiento.
+- Crear una credencial OAuth tipo Android con el paquete y SHA-1 correctos.
+- La variante de pruebas v2.2 usa `com.ortogestion.pro.v22` para instalarse junto a la v2.1 sin sobrescribir sus datos; release usa `com.ortogestion.pro`.
+- La firma debug de los runners hospedados es efímera. Para uso continuado se necesita una clave release estable, guardada como GitHub Actions Secrets. Nunca se debe subir una clave privada al repositorio ni enviarla por chat.
 
-El Client ID y la firma de producción no se inventarán ni se incluirán como valores ficticios. Hasta configurar esos requisitos, la nube debe mostrar claramente que no está configurada y la app debe seguir funcionando sin conexión.
+La guía detallada está en `docs/ANDROID-V22-GOOGLE-DRIVE-CAMERA.md`.
 
-## Fuentes técnicas
-- Android recomienda separar autenticación y autorización y solicitar acceso a Drive solo cuando el usuario inicia esa acción.
-- Google no permite iniciar sesión mediante WebView embebido.
-- El alcance `drive.file` es preferible a permisos amplios de Drive.
-- CameraX/Android requiere permiso CAMERA en tiempo de ejecución para el acceso a cámara; el puente WebView debe limitar el recurso concedido.
+## Validación pendiente
+
+Una compilación verde y las pruebas estáticas no sustituyen una prueba física. Tras instalar la APK en un teléfono Android, habrá que verificar:
+- consentimiento/cancelación de Google;
+- crear carpeta y guardar, listar, descargar/restaurar y eliminar una copia cifrada;
+- denegar y conceder el permiso de cámara;
+- escanear un QR de licencia válido y comprobar la alternativa por fotografía.
+
+No se debe considerar activado Drive ni validado el escáner hasta completar esas pruebas en dispositivo real. No se fusiona a `main` sin aprobación expresa.

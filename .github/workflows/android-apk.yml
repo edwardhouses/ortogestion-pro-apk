@@ -1,7 +1,15 @@
-name: Build OrtoGestion Pro APK
+name: Build OrtoGestion Pro APK v2.2
 
 on:
   workflow_dispatch:
+  push:
+    branches:
+      - feature/android-v22-drive-camera-gis
+    paths:
+      - '.github/workflows/android-apk.yml'
+      - 'android-overlay/**'
+      - 'tests/android-v22-static.sh'
+      - 'app/index.html'
 
 permissions:
   contents: read
@@ -14,7 +22,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v7
 
-      - name: Extract Android wrapper and inject canonical HTML
+      - name: Extract Android wrapper and apply v2.2 overlay
         shell: bash
         run: |
           set -euo pipefail
@@ -24,8 +32,14 @@ jobs:
           test -f "$ROOT/settings.gradle.kts"
           test -f "$ROOT/app/build.gradle.kts"
           mkdir -p "$ROOT/app/src/main/assets/www"
+          cp android-overlay/app/src/main/java/com/ortogestion/pro/MainActivity.kt "$ROOT/app/src/main/java/com/ortogestion/pro/MainActivity.kt"
+          cp android-overlay/app/src/main/java/com/ortogestion/pro/OrtoNubeBridge.kt "$ROOT/app/src/main/java/com/ortogestion/pro/OrtoNubeBridge.kt"
+          cp android-overlay/app/src/main/AndroidManifest.xml "$ROOT/app/src/main/AndroidManifest.xml"
+          cp android-overlay/app/build.gradle.kts "$ROOT/app/build.gradle.kts"
           cp app/index.html "$ROOT/app/src/main/assets/www/index.html"
           cmp -s app/index.html "$ROOT/app/src/main/assets/www/index.html"
+          bash tests/android-v22-static.sh "$ROOT"
+          grep -q 'applicationIdSuffix = ".v22"' android-overlay/app/build.gradle.kts
 
       - name: Set up Java 17
         uses: actions/setup-java@v6
@@ -46,19 +60,22 @@ jobs:
         with:
           gradle-version: '8.9'
 
-      - name: Run application static tests
+      - name: Run application tests
         working-directory: source/OrtoGestion-Pro-Android
         run: bash tests/run-tests.sh
 
-      - name: Build debug APK
+      - name: Build debug APK v2.2
         working-directory: source/OrtoGestion-Pro-Android
         run: gradle --no-daemon --stacktrace :app:assembleDebug
+
+      - name: Report debug signing identity
+        working-directory: source/OrtoGestion-Pro-Android
+        run: gradle --no-daemon :app:signingReport
 
       - name: Upload APK
         uses: actions/upload-artifact@v6
         with:
-          name: OrtoGestion-Pro-2.1-debug-apk
+          name: OrtoGestion-Pro-2.2-debug-apk
           path: source/OrtoGestion-Pro-Android/app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error
           retention-days: 30
-

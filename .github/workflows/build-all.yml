@@ -1,86 +1,12 @@
-
-name: Build OrtoGestion Pro APK and Windows Portable
+name: Build OrtoGestion Pro Windows Portable v2.2 (manual)
 
 on:
   workflow_dispatch:
-  push:
-    paths:
-      - 'app/index.html'
-      - 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
-      - 'OrtoGestion-Pro-Windows-Portable.zip'
-      - '.github/workflows/build-all.yml'
-      - '.github/workflows/android-apk.yml'
-      - '.github/workflows/windows-portable.yml'
 
 permissions:
   contents: read
 
-concurrency:
-  group: ortogestion-build-${{ github.ref }}
-  cancel-in-progress: false
-
 jobs:
-  build-android:
-    name: Build Android APK
-    runs-on: ubuntu-latest
-    timeout-minutes: 45
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
-
-      - name: Validate canonical HTML and extract Android wrapper
-        shell: bash
-        run: |
-          set -euo pipefail
-          test -s app/index.html
-          mkdir -p source
-          unzip -q 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip' -d source
-          ROOT='source/OrtoGestion-Pro-Android'
-          test -f "$ROOT/settings.gradle.kts"
-          test -f "$ROOT/app/build.gradle.kts"
-          test -f "$ROOT/app/src/main/java/com/ortogestion/pro/MainActivity.kt"
-          mkdir -p "$ROOT/app/src/main/assets/www"
-          cp app/index.html "$ROOT/app/src/main/assets/www/index.html"
-          cmp -s app/index.html "$ROOT/app/src/main/assets/www/index.html"
-          sha256sum app/index.html "$ROOT/app/src/main/assets/www/index.html"
-
-      - name: Set up Java 17
-        uses: actions/setup-java@v6
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v4
-
-      - name: Install Android SDK 35
-        shell: bash
-        run: |
-          set -euo pipefail
-          sdkmanager 'platforms;android-35' 'build-tools;35.0.0' 'platform-tools'
-
-      - name: Set up Gradle 8.9
-        uses: gradle/actions/setup-gradle@v6
-        with:
-          gradle-version: '8.9'
-
-      - name: Run Android static tests
-        working-directory: source/OrtoGestion-Pro-Android
-        run: bash tests/run-tests.sh
-
-      - name: Build debug APK
-        working-directory: source/OrtoGestion-Pro-Android
-        run: gradle --no-daemon --stacktrace :app:assembleDebug
-
-      - name: Upload APK
-        uses: actions/upload-artifact@v6
-        with:
-          name: OrtoGestion-Pro-2.1-debug-apk
-          path: source/OrtoGestion-Pro-Android/app/build/outputs/apk/debug/app-debug.apk
-          if-no-files-found: error
-          retention-days: 30
-
   build-windows:
     name: Build Windows portable EXE
     runs-on: windows-latest
@@ -101,13 +27,17 @@ jobs:
           if (!(Test-Path "$root/main.js")) { throw 'No se encontró main.js' }
           New-Item -ItemType Directory -Force -Path "$root/www" | Out-Null
           Copy-Item -LiteralPath 'app/index.html' -Destination "$root/www/index.html" -Force
+          $packagePath = "$root/package.json"
+          $package = Get-Content -Raw $packagePath | ConvertFrom-Json
+          $package.version = '2.2.0'
+          $package | ConvertTo-Json -Depth 100 | Set-Content -Encoding utf8 $packagePath
           $a = (Get-FileHash 'app/index.html' -Algorithm SHA256).Hash
           $b = (Get-FileHash "$root/www/index.html" -Algorithm SHA256).Hash
           if ($a -ne $b) { throw 'El HTML copiado no coincide con la fuente única.' }
           Write-Host "SHA256 HTML: $a"
 
       - name: Set up Node.js 22
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: '22'
 
@@ -122,11 +52,20 @@ jobs:
       - name: Build portable Windows EXE
         working-directory: source/OrtoGestion-Pro-Windows-Portable
         run: npm run dist:win
+      - name: Normalize portable executable version name
+        shell: pwsh
+        working-directory: source/OrtoGestion-Pro-Windows-Portable
+        run: |
+          $exe = Get-ChildItem 'dist/*.exe' | Select-Object -First 1
+          if (!$exe) { throw 'No se generó el EXE portátil.' }
+          if ($exe.Name -ne 'OrtoGestion-Pro-2.2-portable-x64.exe') {
+            Rename-Item -LiteralPath $exe.FullName -NewName 'OrtoGestion-Pro-2.2-portable-x64.exe' -Force
+          }
 
       - name: Upload portable EXE
         uses: actions/upload-artifact@v6
         with:
-          name: OrtoGestion-Pro-2.1-Windows-Portable
+          name: OrtoGestion-Pro-2.2-Windows-Portable
           path: source/OrtoGestion-Pro-Windows-Portable/dist/*.exe
           if-no-files-found: error
           retention-days: 30
