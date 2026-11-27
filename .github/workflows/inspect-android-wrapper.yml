@@ -1,0 +1,55 @@
+name: Inspect Android wrapper sources (read-only)
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - '.github/workflows/inspect-android-wrapper.yml'
+      - 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout pull request branch
+        uses: actions/checkout@v7
+
+      - name: Extract Android wrapper and collect integration files
+        shell: bash
+        run: |
+          set -euo pipefail
+          ZIP='OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
+          test -s "$ZIP"
+          mkdir -p source inspection
+          unzip -q "$ZIP" -d source
+          ROOT='source/OrtoGestion-Pro-Android'
+          test -f "$ROOT/app/src/main/java/com/ortogestion/pro/MainActivity.kt"
+          test -f "$ROOT/app/src/main/AndroidManifest.xml"
+          test -f "$ROOT/app/build.gradle.kts"
+
+          cp "$ROOT/app/src/main/java/com/ortogestion/pro/MainActivity.kt" inspection/
+          cp "$ROOT/app/src/main/AndroidManifest.xml" inspection/
+          cp "$ROOT/app/build.gradle.kts" inspection/
+          cp "$ROOT/settings.gradle.kts" inspection/ 2>/dev/null || true
+          cp "$ROOT/build.gradle.kts" inspection/ 2>/dev/null || true
+          cp "$ROOT/gradle/libs.versions.toml" inspection/ 2>/dev/null || true
+          cp "$ROOT/gradle/wrapper/gradle-wrapper.properties" inspection/ 2>/dev/null || true
+          cp -R "$ROOT/tests" inspection/tests 2>/dev/null || true
+          find "$ROOT/app/src/main" -maxdepth 5 -type f | sort > inspection/android-main-file-inventory.txt
+          find "$ROOT" -maxdepth 3 -type f \( -name '*.gradle' -o -name '*.gradle.kts' -o -name 'gradle.properties' \) | sort > inspection/gradle-file-inventory.txt
+
+          echo "Collected integration sources:"
+          find inspection -type f -maxdepth 5 -print | sort
+
+      - name: Upload read-only source inspection
+        uses: actions/upload-artifact@v6
+        with:
+          name: OrtoGestion-Android-Wrapper-Inspection
+          path: inspection/
+          if-no-files-found: error
+          retention-days: 7
