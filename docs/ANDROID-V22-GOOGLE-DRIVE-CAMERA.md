@@ -10,6 +10,13 @@
 - Permiso Android CAMERA solicitado solo cuando el lector QR intenta abrir la cámara. WebView recibe exclusivamente `RESOURCE_VIDEO_CAPTURE` y solo desde `https://appassets.androidplatform.net`.
 - El selector de imágenes/archivos existente permanece disponible como alternativa.
 
+## Datos de la APK de prueba v2.2 generada en GitHub Actions
+
+- Paquete Android: `com.ortogestion.pro.v22`
+- SHA-1 debug de la ejecución 46083046443: `01:A7:71:1D:76:75:CE:99:46:07:26:4E:CA:50:DA:C3:B4:3E:24:05`
+
+Esta huella corresponde únicamente a esa APK debug. El runner hospedado crea una clave debug efímera, por lo que otra compilación puede tener otra huella. No usar esta firma debug como identidad de producción.
+
 ## Configuración necesaria en Google Cloud
 
 La integración de código no crea ni configura un proyecto Google Cloud. Para habilitar Drive en una distribución real:
