@@ -30,7 +30,7 @@ Google Drive no se puede habilitar para una cuenta real hasta configurar Google 
 
 - Habilitar Google Drive API y completar la pantalla de consentimiento.
 - Crear una credencial OAuth tipo Android con el paquete y SHA-1 correctos.
-- La variante debug de la APK usa `com.ortogestion.pro.debug`; release usa `com.ortogestion.pro`.
+- La variante de pruebas v2.2 usa `com.ortogestion.pro.v22` para instalarse junto a la v2.1 sin sobrescribir sus datos; release usa `com.ortogestion.pro`.
 - La firma debug de los runners hospedados es efímera. Para uso continuado se necesita una clave release estable, guardada como GitHub Actions Secrets. Nunca se debe subir una clave privada al repositorio ni enviarla por chat.
 
 La guía detallada está en `docs/ANDROID-V22-GOOGLE-DRIVE-CAMERA.md`.
