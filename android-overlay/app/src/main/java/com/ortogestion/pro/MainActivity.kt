@@ -220,7 +220,7 @@ class MainActivity : ComponentActivity() {
         @JavascriptInterface
         fun saveBlob(base64: String, filename: String, mimeType: String) {
             if (base64.length > 70_000_000) return
-            val safeName = filename.substringAfterLast('/').substringAfterLast('\\\\').filter { it.isLetterOrDigit() || it in "._-" }.take(100)
+            val safeName = filename.substringAfterLast('/').substringAfterLast(92.toChar()).filter { c -> c.isLetterOrDigit() || c in "._-" }.take(100).ifBlank { "ortogestion-export.bin" }
                 .ifBlank { "ortogestion-export.bin" }
             val bytes = try { Base64.decode(base64, Base64.DEFAULT) } catch (_: Exception) { return }
             if (bytes.size > 50 * 1024 * 1024) return
