@@ -13,7 +13,7 @@
 ## Datos de la APK de prueba v2.2 generada en GitHub Actions
 
 - Paquete Android: `com.ortogestion.pro.v22`
-- SHA-1 debug de la ejecución 46083046443: `01:A7:71:1D:76:75:CE:99:46:07:26:4E:CA:50:DA:C3:B4:3E:24:05`
+- SHA-1 debug de la ejecución 46083365982: `17:09:02:D2:02:08:AA:1C:1B:89:7B:9E:D3:43:49:59:EA:67:33:FF`
 
 Esta huella corresponde únicamente a esa APK debug. El runner hospedado crea una clave debug efímera, por lo que otra compilación puede tener otra huella. No usar esta firma debug como identidad de producción.
 
