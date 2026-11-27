@@ -213,7 +213,7 @@ class OrtoNubeBridge(
     } catch (_: Exception) { "" }
 
     private fun js(code: String) { webView.post { webView.evaluateJavascript(code, null) } }
-    private fun safeFilename(value: String): String = value.substringAfterLast('/').substringAfterLast('\\')
+    private fun safeFilename(value: String): String = value.substringAfterLast('/').substringAfterLast(92.toChar())
         .filter { it.isLetterOrDigit() || it in "._-" }.take(100).ifBlank { "OrtoGestion.ogbackup" }
     private fun safeMessage(e: Exception): String = (e.message ?: "Error inesperado").take(300)
     private fun enc(value: String): String = URLEncoder.encode(value, "UTF-8")
