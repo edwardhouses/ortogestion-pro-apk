@@ -39,6 +39,7 @@ jobs:
           cp app/index.html "$ROOT/app/src/main/assets/www/index.html"
           cmp -s app/index.html "$ROOT/app/src/main/assets/www/index.html"
           bash tests/android-v22-static.sh "$ROOT"
+          grep -q 'applicationIdSuffix = ".v22"' android-overlay/app/build.gradle.kts
 
       - name: Set up Java 17
         uses: actions/setup-java@v6
