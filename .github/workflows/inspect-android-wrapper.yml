@@ -1,12 +1,12 @@
 name: Inspect Android wrapper sources (read-only)
 
 on:
-  pull_request:
+  push:
     branches:
-      - main
+      - maintenance/android-wrapper-inspection-run
     paths:
       - '.github/workflows/inspect-android-wrapper.yml'
-      - 'OrtoGestion-Pro-Android-v2.1-cloud-build(2).zip'
+  workflow_dispatch:
 
 permissions:
   contents: read
@@ -16,10 +16,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - name: Checkout pull request branch
+      - name: Checkout inspection branch
         uses: actions/checkout@v7
 
-      - name: Extract Android wrapper and collect integration files
+      - name: Extract Android wrapper and discover native source files
         shell: bash
         run: |
           set -euo pipefail
@@ -27,22 +27,29 @@ jobs:
           test -s "$ZIP"
           mkdir -p source inspection
           unzip -q "$ZIP" -d source
-          ROOT='source/OrtoGestion-Pro-Android'
-          test -f "$ROOT/app/src/main/java/com/ortogestion/pro/MainActivity.kt"
-          test -f "$ROOT/app/src/main/AndroidManifest.xml"
-          test -f "$ROOT/app/build.gradle.kts"
 
-          cp "$ROOT/app/src/main/java/com/ortogestion/pro/MainActivity.kt" inspection/
-          cp "$ROOT/app/src/main/AndroidManifest.xml" inspection/
-          cp "$ROOT/app/build.gradle.kts" inspection/
-          cp "$ROOT/settings.gradle.kts" inspection/ 2>/dev/null || true
-          cp "$ROOT/build.gradle.kts" inspection/ 2>/dev/null || true
-          cp "$ROOT/gradle/libs.versions.toml" inspection/ 2>/dev/null || true
-          cp "$ROOT/gradle/wrapper/gradle-wrapper.properties" inspection/ 2>/dev/null || true
-          cp -R "$ROOT/tests" inspection/tests 2>/dev/null || true
-          find "$ROOT/app/src/main" -maxdepth 5 -type f | sort > inspection/android-main-file-inventory.txt
-          find "$ROOT" -maxdepth 3 -type f \( -name '*.gradle' -o -name '*.gradle.kts' -o -name 'gradle.properties' \) | sort > inspection/gradle-file-inventory.txt
+          MAIN="$(find source -type f -name MainActivity.kt -print -quit)"
+          MANIFEST="$(find source -type f -name AndroidManifest.xml -print -quit)"
+          APP_GRADLE="$(find source -type f -path '*/app/build.gradle.kts' -print -quit)"
+          test -n "$MAIN" && test -f "$MAIN"
+          test -n "$MANIFEST" && test -f "$MANIFEST"
+          test -n "$APP_GRADLE" && test -f "$APP_GRADLE"
 
+          ROOT="$(dirname "$(dirname "$APP_GRADLE")")"
+          cp "$MAIN" inspection/MainActivity.kt
+          cp "$MANIFEST" inspection/AndroidManifest.xml
+          cp "$APP_GRADLE" inspection/app-build.gradle.kts
+
+          for file in "$ROOT/settings.gradle.kts" "$ROOT/build.gradle.kts" "$ROOT/gradle/libs.versions.toml" "$ROOT/gradle/wrapper/gradle-wrapper.properties"; do
+            if [ -f "$file" ]; then
+              cp "$file" "inspection/$(basename "$file")"
+            fi
+          done
+
+          MAIN_DIR="$(dirname "$MAIN")"
+          find "$ROOT/app/src/main" -maxdepth 6 -type f 2>/dev/null | sort > inspection/android-main-file-inventory.txt || true
+          find "$ROOT" -maxdepth 4 -type f \( -name '*.gradle' -o -name '*.gradle.kts' -o -name 'gradle.properties' \) | sort > inspection/gradle-file-inventory.txt
+          printf 'MainActivity: %s\nManifest: %s\nApp Gradle: %s\nProject root: %s\n' "$MAIN" "$MANIFEST" "$APP_GRADLE" "$ROOT" > inspection/source-locations.txt
           echo "Collected integration sources:"
           find inspection -type f -maxdepth 5 -print | sort
 
