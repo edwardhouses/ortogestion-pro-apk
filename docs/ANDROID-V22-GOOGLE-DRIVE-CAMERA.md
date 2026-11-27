@@ -17,7 +17,7 @@ La integración de código no crea ni configura un proyecto Google Cloud. Para h
 1. En Google Cloud Console, crea o selecciona un proyecto y habilita Google Drive API.
 2. Configura la pantalla de consentimiento y los datos de la aplicación.
 3. Crea una credencial OAuth de tipo **Android** para el identificador de paquete correspondiente y la huella SHA-1 del certificado con el que se firma la APK.
-4. La variante debug de este workflow usa el paquete `com.ortogestion.pro.debug`; la variante release usa `com.ortogestion.pro`. Son registros Android distintos.
+4. La variante de pruebas v2.2 usa el paquete `com.ortogestion.pro.v22` para instalarse al lado de la v2.1 sin sobrescribirla; la variante release usa `com.ortogestion.pro`. Son registros Android distintos.
 5. La clave debug que GitHub Actions crea de forma efímera no es una identidad estable. Para pruebas iniciales se puede registrar su SHA-1 y usar el APK de esa misma ejecución. Para distribución se necesita una clave de firma release estable, protegida como GitHub Actions Secrets; nunca se debe subir al repositorio ni compartir por chat.
 6. La aplicación solicita el permiso `drive.file` en el momento de usar Drive. La autorización puede necesitar consentimiento del usuario.
 
